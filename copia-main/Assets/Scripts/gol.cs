@@ -8,15 +8,62 @@ using TMPro;
 
 public class gol : NetworkBehaviour
 {
-    public int score;
+    private NetworkVariable<int> score = new NetworkVariable<int>();
     public Ball ball;
-    //public PlayerRespawner playerRespawner;
-     public TextMeshProUGUI scoreText; // Use public Text scoreText; for standard UI Text
+    public PlayerRespawner playerRespawner;
+    public TextMeshProUGUI scoreText;
 
-     private void Start()
+    public override void OnNetworkSpawn()
     {
-        UpdateScoreText(); // Initial update to display the starting score
+        if (IsServer)
+        {
+            score.Value = 0;
+            UpdateScoreClientRpc(score.Value);
+        }
     }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Ball"))
+        {
+            ball.ResetOwnershipToHostServerRpc();
+            IncrementScoreServerRpc();
+           // ball.Respawn();
+        }
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void IncrementScoreServerRpc()
+    {
+        if (ball.Respawn()){
+        score.Value += 1;
+       
+        }
+        UpdateScoreClientRpc(score.Value);
+       
+    }
+
+    [ClientRpc]
+    private void UpdateScoreClientRpc(int newScore)
+    {
+        scoreText.text = "playerOne:-" + newScore.ToString();
+        
+        //ball.Respawn();
+        playerRespawner.RespawnPlayersAfterGoal();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void ResetScoreServerRpc()
+    {
+        score.Value = 0;
+        UpdateScoreClientRpc(score.Value);
+    }
+   
+}
+
+
+
+    /*
     private void OnTriggerEnter(Collider other)
 {
  
@@ -25,9 +72,10 @@ public class gol : NetworkBehaviour
        
        
             // goal scored
-            score++;
+            //score++;
+            score.Value = score.Value + 1;
             ball.Respawn();
-            //playerRespawner.RespawnPlayersAfterGoal();
+            playerRespawner.RespawnPlayersAfterGoal();
         UpdateScoreText(); 
     }
     
@@ -35,14 +83,14 @@ public class gol : NetworkBehaviour
 }
 public void UpdateScoreText()
     {
-        scoreText.text = "playerOne:-" + score.ToString();
+        scoreText.text = "playerOne:-" + score.Value.ToString();
     }
 
 public void reset()
     {
-        score = 0;
+        score.Value = 0;
         UpdateScoreText(); 
     }
 
+*/
 
-}

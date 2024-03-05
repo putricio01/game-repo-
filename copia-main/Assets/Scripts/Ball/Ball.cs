@@ -1,4 +1,4 @@
-﻿using System;
+﻿ using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
 using Unity.Netcode;
@@ -104,11 +104,25 @@ public class Ball : NetworkBehaviour
         //        rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y - SlowVelocityGround, rb.velocity.z);
         //    }
     }
-    public void Respawn()
+    public bool Respawn()
     {
         // Set the position to the spawn point (you can hardcode it or reference a Transform)
         transform.position = new Vector3(0, 1, 0); // Example position
         _rb.velocity = Vector3.zero;
         _rb.angularVelocity = Vector3.zero;
+        return true;
+    }
+
+
+    [ServerRpc(RequireOwnership = false)]
+    public void ResetOwnershipToHostServerRpc()
+    {
+        // Check if the object has a NetworkObject component
+        var networkObject = GetComponent<NetworkObject>();
+        if (networkObject != null)
+        {
+            // Change ownership back to the server/host
+            networkObject.ChangeOwnership(NetworkManager.Singleton.LocalClientId);
+        }
     }
 }

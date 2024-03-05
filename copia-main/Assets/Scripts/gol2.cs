@@ -1,48 +1,65 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 using TMPro;
 
-
 public class gol2 : NetworkBehaviour
 {
-    public int score;
+    private NetworkVariable<int> score = new NetworkVariable<int>();
     public Ball ball;
-    //public PlayerRespawner playerRespawner;
-     public TextMeshProUGUI scoreText; // Use public Text scoreText; for standard UI Text
+    public PlayerRespawner playerRespawner;
+    public TextMeshProUGUI scoreText;
 
-     private void Start()
+    public override void OnNetworkSpawn()
     {
-        UpdateScoreText(); // Initial update to display the starting score
+        if (IsServer)
+        {
+            score.Value = 0;
+            UpdateScoreClientRpc(score.Value);
+        }
     }
+
     private void OnTriggerEnter(Collider other)
-{
- 
-    if (other.CompareTag("Ball"))
     {
-       
-       
-            // goal scored
-            score++;
-            ball.Respawn();
-           // playerRespawner.RespawnPlayersAfterGoal();
-        UpdateScoreText(); 
+        if (other.CompareTag("Ball"))
+        {
+            ball.ResetOwnershipToHostServerRpc();
+            
+            IncrementScoreServerRpc();
+            // ball.Respawn();
+        }
     }
+
+    [ServerRpc(RequireOwnership = false)]
+    public void IncrementScoreServerRpc()
+    {
+       if (ball.Respawn()){
+        score.Value += 1;
+       
+        }
+        //playerRespawner.RespawnPlayersAfterGoal();
     
-
-}
-public void UpdateScoreText()
-    {
-        scoreText.text = "player2:-" + score.ToString();
-    }
-public void reset()
-    {
-        score = 0;
-       
+        UpdateScoreClientRpc(score.Value);
         
-        UpdateScoreText();
+    } 
+
+    [ClientRpc]
+    private void UpdateScoreClientRpc(int newScore)
+    {
+        scoreText.text = "player2:-" + newScore.ToString();
+      
+       // ball.Respawn();
+        playerRespawner.RespawnPlayersAfterGoal();
+
+
     }
 
+    [ServerRpc(RequireOwnership = false)]
+    public void ResetScoreServerRpc()
+    {
+        score.Value = 0;
+
+        UpdateScoreClientRpc(score.Value);
+    }
+   
 }
